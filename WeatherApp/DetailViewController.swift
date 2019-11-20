@@ -104,5 +104,12 @@ class DetailViewController: UIViewController {
             }
         }
     }
+    
+    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
+        if segue.identifier == "showMap" {
+            let vc: MapViewController = segue.destination as! MapViewController
+            vc.place = self.weatherCombined?.latt_long
+       }
+    }
 }
 

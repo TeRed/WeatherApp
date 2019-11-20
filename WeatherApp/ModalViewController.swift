@@ -7,14 +7,16 @@
 //
 
 import UIKit
+import CoreLocation
 
 class ModalViewController: UIViewController {
     
     @IBOutlet weak var citiesTableView: UITableView!
     @IBOutlet weak var searchTextField: UITextField!
-
+    @IBOutlet weak var currentLocationView: UILabel!
+    
     @IBAction func onSearch(_ sender: Any) {
-        fetchData(searchTextField.text!)
+        fetchData("query=\(searchTextField.text!)", "")
     }
     
     @IBAction func onClose(_ sender: Any) {
@@ -23,6 +25,8 @@ class ModalViewController: UIViewController {
     
     var masterViewController: MasterViewController? = nil
     
+    let locationManager = CLLocationManager()
+    
     private var cities: [City] = []
     
     override func viewDidLoad() {
@@ -30,18 +34,34 @@ class ModalViewController: UIViewController {
         
         citiesTableView.delegate = self
         citiesTableView.dataSource = self
+        
+        if (CLLocationManager.locationServicesEnabled())
+        {
+            locationManager.delegate = self
+            locationManager.desiredAccuracy = kCLLocationAccuracyBest
+            locationManager.requestWhenInUseAuthorization()
+            locationManager.startUpdatingLocation()
+        } else {
+            print("Location not enabled...")
+        }
     }
     
     private func getUrl(_ query: String) -> URL {
-        return URL(string: "https://www.metaweather.com/api/location/search/?query=\(query)")!
+        return URL(string: "https://www.metaweather.com/api/location/search/?\(query)")!
     }
         
-    private func fetchData(_ query: String) {
+    private func fetchData(_ query: String, _ city: String) {
         URLSession.shared.dataTask(with: getUrl(query)) { (data, response, error) in
             guard let data = data else { return }
             do {
                 let decoder = JSONDecoder()
                 self.cities = try decoder.decode([City].self, from: data)
+                
+                let city = self.cities.filter { $0.title == city }
+                
+                if (city.count == 1) {
+                    self.cities = city
+                }
                 
                 DispatchQueue.main.async {
                     self.citiesTableView.reloadData()
@@ -50,6 +70,30 @@ class ModalViewController: UIViewController {
                 print("Error while parsing", err)
             }
         }.resume()
+    }
+}
+
+extension ModalViewController: CLLocationManagerDelegate {
+    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        print("Failed to find user's location: \(error.localizedDescription)")
+    }
+    
+    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation])
+    {
+        if let location = locations.last {            
+            CLGeocoder().reverseGeocodeLocation(location, preferredLocale: nil) { (clPlacemark: [CLPlacemark]?, error: Error?) in
+                guard let placemark = clPlacemark?.first else {
+                    print("No placemark from Apple: \(String(describing: error))")
+                    self.fetchData("lattlong=\(location.coordinate.latitude),\(location.coordinate.longitude)", "")
+                    return
+                }
+                
+                DispatchQueue.main.async {
+                    self.currentLocationView.text = "\(placemark.locality ?? "Unknown"), \(placemark.country ?? "Unknown")"
+                    self.fetchData("lattlong=\(location.coordinate.latitude),\(location.coordinate.longitude)", placemark.locality ?? "")
+                }
+            }
+        }
     }
 }
 

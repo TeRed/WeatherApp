@@ -14,6 +14,13 @@ class MasterViewController: UITableViewController {
     
     var cities: [City] = [City(title: "London", woeid: 44418), City(title: "San Francisco", woeid: 2487956), City(title: "Warsaw", woeid: 523920)]
     var citiesWeather: [Int: WeatherData] = [:]
+    
+    var newCity: City? {
+        didSet {
+            self.cities.append(newCity!)
+            self.tableView.reloadData()
+        }
+    }
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -59,13 +66,6 @@ class MasterViewController: UITableViewController {
            vc.masterViewController = self
        }
     }
-    
-    var newCity: City? {
-        didSet {
-            self.cities.append(newCity!)
-            self.tableView.reloadData()
-        }
-    }
 
     // MARK: - Table View
 
@@ -88,6 +88,20 @@ class MasterViewController: UITableViewController {
         
         return cell
     }
+    
+    override func tableView(_ tableView: UITableView, canEditRowAt indexPath: IndexPath) -> Bool {
+        // Return false if you do not want the specified item to be editable.
+        return true
+    }
+
+    override func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
+        if editingStyle == .delete {
+            self.cities.remove(at: indexPath.row)
+            self.tableView.reloadData()
+        }
+    }
+    
+    // MARK: - Fetching
     
     func updateCell(_ cell: CityInfoCellTableView, _ city: City) {
         if let weatherData = self.citiesWeather[city.woeid!] {
@@ -115,20 +129,5 @@ class MasterViewController: UITableViewController {
             }
         }.resume()
     }
-
-    override func tableView(_ tableView: UITableView, canEditRowAt indexPath: IndexPath) -> Bool {
-        // Return false if you do not want the specified item to be editable.
-        return true
-    }
-
-    override func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
-        if editingStyle == .delete {
-            self.cities.remove(at: indexPath.row)
-            self.tableView.reloadData()
-        } else if editingStyle == .insert {
-            // Create a new instance of the appropriate class, insert it into the array, and add a new row to the table view.
-        }
-    }
-
 }
 

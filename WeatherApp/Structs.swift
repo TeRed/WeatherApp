@@ -24,6 +24,7 @@ struct WeatherData: Codable {
 struct WeatherCombined: Codable {
     let consolidated_weather: [WeatherData]
     let title: String?
+    let latt_long: String?
 }
 
 struct City: Codable {
